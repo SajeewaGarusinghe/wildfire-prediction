@@ -79,7 +79,12 @@ class FeatureEngineer:
     def spatial_interpolation(self, df: pd.DataFrame, target_grid: pd.DataFrame, 
                             value_columns: List[str]) -> pd.DataFrame:
         """Interpolate point data to regular grid"""
-        from scipy.spatial import KDTree
+        try:
+            from scipy.spatial import KDTree
+        except ImportError:
+            logger.warning("SciPy not available, using simple nearest neighbor interpolation")
+            # Simple fallback without scipy
+            return self._simple_spatial_interpolation(df, target_grid, value_columns)
         
         results = []
         
@@ -120,6 +125,47 @@ class FeatureEngineer:
                     'longitude': grid_point['longitude'],
                     **interpolated_values
                 }
+                results.append(record)
+        
+        return pd.DataFrame(results)
+    
+    def _simple_spatial_interpolation(self, df: pd.DataFrame, target_grid: pd.DataFrame, 
+                                    value_columns: List[str]) -> pd.DataFrame:
+        """Simple spatial interpolation without scipy dependency"""
+        results = []
+        
+        for date in df['date'].unique():
+            date_data = df[df['date'] == date].copy()
+            
+            if len(date_data) == 0:
+                continue
+            
+            # For each grid point, find nearest data point using simple distance
+            for _, grid_point in target_grid.iterrows():
+                grid_lat, grid_lon = grid_point['latitude'], grid_point['longitude']
+                
+                # Calculate simple Euclidean distances
+                distances = np.sqrt(
+                    (date_data['latitude'] - grid_lat)**2 + 
+                    (date_data['longitude'] - grid_lon)**2
+                )
+                
+                # Find nearest point
+                nearest_idx = distances.idxmin()
+                nearest_data = date_data.loc[nearest_idx]
+                
+                # Create interpolated record
+                record = {
+                    'date': date,
+                    'grid_id': grid_point['grid_id'],
+                    'latitude': grid_point['latitude'],
+                    'longitude': grid_point['longitude']
+                }
+                
+                # Copy values from nearest point
+                for col in value_columns:
+                    record[col] = nearest_data[col]
+                
                 results.append(record)
         
         return pd.DataFrame(results)

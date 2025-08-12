@@ -1,6 +1,8 @@
 services:
   wildfire-api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
     ports:
       - "5050:5050"
     volumes:

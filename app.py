@@ -16,7 +16,13 @@ import joblib
 from typing import Dict, List, Optional
 
 from config import APIConfig, DatabaseConfig, DataConfig, ModelConfig
-from src.feature_engineering import FeatureEngineer
+
+# Optional import for feature engineering
+try:
+    from src.feature_engineering import FeatureEngineer
+except ImportError:
+    logger.warning("FeatureEngineer not available - some features will be limited")
+    FeatureEngineer = None
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -63,8 +69,12 @@ def load_models():
         else:
             logger.warning("Logistic Regression model not found")
         
-        # Initialize feature engineer
-        feature_engineer = FeatureEngineer()
+        # Initialize feature engineer if available
+        if FeatureEngineer:
+            feature_engineer = FeatureEngineer()
+        else:
+            feature_engineer = None
+            logger.warning("FeatureEngineer not available")
         
         # Load feature columns or use defaults
         feature_cols_path = DataConfig.PROCESSED_DATA_DIR / "feature_columns.txt"
@@ -89,7 +99,7 @@ def load_models():
         logger.error(f"Error loading models: {e}")
         # Initialize with empty models to prevent crashes
         models = {}
-        feature_engineer = FeatureEngineer() if 'FeatureEngineer' in globals() else None
+        feature_engineer = FeatureEngineer() if FeatureEngineer else None
         feature_columns = [
             'temperature', 'humidity', 'wind_speed', 'ndvi',
             'fire_weather_index', 'drought_index'
