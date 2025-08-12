@@ -51,6 +51,18 @@ source wildfire-env/bin/activate  # On Windows: wildfire-env\Scripts\activate
 ```
 
 ### 3. Install Dependencies
+
+For local development:
+```bash
+pip install -r requirements-local.txt
+```
+
+For Docker deployment:
+```bash
+# Docker will use requirements-docker.txt automatically
+```
+
+For full geospatial features:
 ```bash
 pip install -r requirements.txt
 ```
@@ -208,7 +220,24 @@ docker build -t wildfire-prediction .
 docker-compose up -d
 
 # Access application
-curl http://localhost/api/health
+curl http://localhost:5000/api/health
+```
+
+### Troubleshooting Docker Issues
+
+If you encounter build errors:
+
+1. **Package installation issues**: The Docker build uses `requirements-docker.txt` with minimal dependencies
+2. **Geospatial dependencies**: Commented out by default to avoid build issues
+3. **Python version**: Uses Python 3.9 for broad compatibility
+
+```bash
+# For local development without Docker
+pip install -r requirements-local.txt
+python app.py
+
+# For minimal Docker setup
+docker build -f Dockerfile.minimal -t wildfire-prediction-minimal .
 ```
 
 ### Production Deployment

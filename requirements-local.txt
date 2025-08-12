@@ -1,0 +1,44 @@
+# Complete requirements for local development
+# Core data processing
+pandas
+numpy
+scipy
+
+# Machine learning
+tensorflow
+scikit-learn
+xgboost
+
+# Geospatial processing (install separately if needed)
+# rasterio
+# geopandas
+# shapely
+# pyproj
+# folium
+
+# Data visualization
+matplotlib
+seaborn
+plotly
+
+# Web framework
+flask
+flask-cors
+
+# Database (sqlite3 is built into Python)
+sqlalchemy
+
+# Utilities
+requests
+python-dotenv
+tqdm
+joblib
+
+# Jupyter
+jupyter
+ipykernel
+
+# Development tools
+pytest
+black
+flake8

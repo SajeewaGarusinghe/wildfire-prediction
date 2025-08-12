@@ -128,17 +128,42 @@ def check_prerequisites():
             logger.info(f"Created directory: {dir_name}")
     
     # Check if Python packages are installed
-    try:
-        import pandas
-        import numpy
-        import tensorflow
-        import sklearn
-        import flask
-        logger.info("All required packages are available")
-    except ImportError as e:
-        logger.error(f"Missing required package: {e}")
-        logger.info("Please install requirements: pip install -r requirements.txt")
+    required_packages = {
+        'pandas': 'pandas',
+        'numpy': 'numpy', 
+        'tensorflow': 'tensorflow',
+        'sklearn': 'scikit-learn',
+        'flask': 'flask'
+    }
+    
+    missing_packages = []
+    for package_name, install_name in required_packages.items():
+        try:
+            __import__(package_name)
+        except ImportError:
+            missing_packages.append(install_name)
+    
+    if missing_packages:
+        logger.error(f"Missing required packages: {missing_packages}")
+        logger.info("Please install requirements:")
+        logger.info("  For local development: pip install -r requirements-local.txt")
+        logger.info("  For full features: pip install -r requirements.txt")
         return False
+    
+    # Check optional geospatial packages
+    optional_packages = ['rasterio', 'geopandas']
+    missing_optional = []
+    for package in optional_packages:
+        try:
+            __import__(package)
+        except ImportError:
+            missing_optional.append(package)
+    
+    if missing_optional:
+        logger.warning(f"Optional geospatial packages not available: {missing_optional}")
+        logger.info("Some advanced geospatial features may be limited")
+    
+    logger.info("Core packages check passed")
     
     logger.info("Prerequisites check passed")
     return True
