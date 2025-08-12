@@ -1,0 +1,124 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Type checkers
+.mypy_cache/
+.dmypy.json
+.dmypy.json
+.pyre/
+.pytype/
+
+# Cython
+cython_debug/
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
+
+# ---- Virtual environments ----
+.env/
+.venv/
+venv/
+env/
+ENV/
+venv.bak/
+
+# ---- Environment & secrets ----
+# Ignore all env files by default, keep the provided template
+*.env
+.env.*
+!.env.example
+!environment_template.env
+.secrets/
+secrets.*
+
+# ---- Logs & runtime ----
+logs/
+*.log
+*.pid
+*.seed
+*.out
+*.err
+
+# ---- Data / artifacts (adjust as needed) ----
+/data/
+/datasets/
+/artifacts/
+/output/
+/outputs/
+/checkpoints/
+/mlruns/
+/tmp/
+/temp/
+
+# Keep notebooks tracked but ignore their checkpoints (set above)
+# notebooks/*.ipynb are allowed
+
+# ---- Docker ----
+.docker/
+docker-compose.override.yml
+
+# ---- Editors/IDE ----
+.vscode/
+.idea/
+*.iml
+
+# ---- OS files ----
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+desktop.ini
+Icon? 
+$RECYCLE.BIN/
+
+# ---- Node (if present for front-end bits) ----
+node_modules/
+*.tsbuildinfo
+
+# ---- Misc ----
+.git-credentials
