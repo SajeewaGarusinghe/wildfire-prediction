@@ -35,40 +35,65 @@ def load_models():
     """Load all trained models"""
     global models, feature_engineer, feature_columns
     
-    models_dir = Path(DataConfig.MODELS_DIR)
-    
     try:
+        models_dir = Path(DataConfig.MODELS_DIR)
+        models_dir.mkdir(parents=True, exist_ok=True)  # Create directory if it doesn't exist
+        
         # Load CNN-LSTM model
         cnn_lstm_path = models_dir / "cnn_lstm_model.h5"
         if cnn_lstm_path.exists():
             models['cnn_lstm'] = tf.keras.models.load_model(cnn_lstm_path)
             logger.info("Loaded CNN-LSTM model")
+        else:
+            logger.warning("CNN-LSTM model not found")
         
         # Load Random Forest model
         rf_path = models_dir / "randomforest_model.pkl"
         if rf_path.exists():
             models['random_forest'] = joblib.load(rf_path)
             logger.info("Loaded Random Forest model")
+        else:
+            logger.warning("Random Forest model not found")
         
         # Load Logistic Regression model
         lr_path = models_dir / "logisticregression_model.pkl"
         if lr_path.exists():
             models['logistic_regression'] = joblib.load(lr_path)
             logger.info("Loaded Logistic Regression model")
+        else:
+            logger.warning("Logistic Regression model not found")
         
         # Initialize feature engineer
         feature_engineer = FeatureEngineer()
         
-        # Load feature columns
+        # Load feature columns or use defaults
         feature_cols_path = DataConfig.PROCESSED_DATA_DIR / "feature_columns.txt"
         if feature_cols_path.exists():
             with open(feature_cols_path, 'r') as f:
                 feature_columns = [line.strip() for line in f.readlines()]
+        else:
+            # Default feature columns if file doesn't exist
+            feature_columns = [
+                'temperature', 'humidity', 'wind_speed', 'precipitation',
+                'ndvi', 'evi', 'ndmi', 'nbr', 'fire_weather_index',
+                'drought_index', 'fuel_moisture_estimate'
+            ]
+            logger.warning("Using default feature columns")
         
-        logger.info(f"Loaded {len(models)} models and {len(feature_columns)} feature columns")
+        if len(models) == 0:
+            logger.warning("No trained models found. The system will use mock predictions.")
+        else:
+            logger.info(f"Loaded {len(models)} models and {len(feature_columns)} feature columns")
         
     except Exception as e:
         logger.error(f"Error loading models: {e}")
+        # Initialize with empty models to prevent crashes
+        models = {}
+        feature_engineer = FeatureEngineer() if 'FeatureEngineer' in globals() else None
+        feature_columns = [
+            'temperature', 'humidity', 'wind_speed', 'ndvi',
+            'fire_weather_index', 'drought_index'
+        ]
 
 def determine_risk_level(risk_score: float) -> str:
     """Convert risk score to categorical risk level"""
@@ -183,22 +208,43 @@ def predict_risk():
         predictions = {}
         
         if 'cnn_lstm' in models:
-            pred = models['cnn_lstm'].predict(X, verbose=0)[0][0]
-            predictions['cnn_lstm'] = float(pred)
+            try:
+                pred = models['cnn_lstm'].predict(X, verbose=0)[0][0]
+                predictions['cnn_lstm'] = float(pred)
+            except Exception as e:
+                logger.warning(f"CNN-LSTM prediction failed: {e}")
         
         if 'random_forest' in models:
-            pred = models['random_forest'].predict_proba(X)[0][1]
-            predictions['random_forest'] = float(pred)
+            try:
+                pred = models['random_forest'].predict_proba(X)[0][1]
+                predictions['random_forest'] = float(pred)
+            except Exception as e:
+                logger.warning(f"Random Forest prediction failed: {e}")
         
         if 'logistic_regression' in models:
-            pred = models['logistic_regression'].predict_proba(X)[0][1]
-            predictions['logistic_regression'] = float(pred)
+            try:
+                pred = models['logistic_regression'].predict_proba(X)[0][1]
+                predictions['logistic_regression'] = float(pred)
+            except Exception as e:
+                logger.warning(f"Logistic Regression prediction failed: {e}")
         
         # Ensemble prediction (average of available models)
         if predictions:
             ensemble_score = np.mean(list(predictions.values()))
         else:
-            return jsonify({'error': 'No models available for prediction'}), 500
+            # Use a simple heuristic if no models are available
+            logger.warning("No models available, using heuristic prediction")
+            
+            # Simple fire risk heuristic based on weather conditions
+            temp_risk = min(1.0, max(0.0, (data['temperature'] - 20) / 30))  # Higher temp = higher risk
+            humidity_risk = min(1.0, max(0.0, (50 - data['humidity']) / 50))  # Lower humidity = higher risk  
+            wind_risk = min(1.0, max(0.0, data['wind_speed'] / 25))  # Higher wind = higher risk
+            drought_risk = 1.0 - min(1.0, max(0.0, data.get('precipitation', 0) / 10))  # Less rain = higher risk
+            
+            # Combine factors with weights
+            ensemble_score = (temp_risk * 0.3 + humidity_risk * 0.3 + wind_risk * 0.2 + drought_risk * 0.2)
+            
+            predictions['heuristic'] = float(ensemble_score)
         
         # Determine risk level
         risk_level = determine_risk_level(ensemble_score)

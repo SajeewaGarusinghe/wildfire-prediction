@@ -39,6 +39,7 @@ class DataConfig:
     SATELLITE_DATA_DIR = RAW_DATA_DIR / "satellite"
     WEATHER_DATA_DIR = RAW_DATA_DIR / "weather"
     FIRE_DATA_DIR = RAW_DATA_DIR / "fire_records"
+    MODELS_DIR = MODELS_DIR  # Add the missing MODELS_DIR reference
     
     # API configurations
     NOAA_API_KEY = os.getenv('NOAA_API_KEY', '')
