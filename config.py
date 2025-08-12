@@ -103,8 +103,8 @@ class DatabaseConfig:
 
 class APIConfig:
     HOST = "0.0.0.0"
-    PORT = 5000
-    DEBUG = True
+    PORT = 5050
+    DEBUG = False  # Set to False for production deployment
     
     # Risk thresholds
     HIGH_RISK_THRESHOLD = 0.8
