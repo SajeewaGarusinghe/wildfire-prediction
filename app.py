@@ -375,9 +375,37 @@ def predict_wildfire_risk():
             except Exception as e:
                 logger.warning(f"Prediction failed for {model_name}: {e}")
         
-        # Calculate ensemble prediction
+        # Calculate weighted ensemble prediction based on model performance
         if predictions:
-            ensemble_score = np.mean(list(predictions.values()))
+            # Model weights based on training performance (ROC-AUC scores)
+            model_weights = {
+                'gradient_boosting': 0.35,    # Best model (99.46% AUC)
+                'random_forest': 0.30,        # Second best (98.82% AUC)  
+                'neural_network': 0.25,       # Good performance (94.64% AUC)
+                'logistic_regression': 0.10   # Baseline (85.74% AUC)
+            }
+            
+            # Calculate weighted average
+            weighted_sum = 0
+            total_weight = 0
+            
+            for model_name, prediction in predictions.items():
+                weight = model_weights.get(model_name, 0.2)  # Default weight
+                weighted_sum += prediction * weight
+                total_weight += weight
+            
+            ensemble_score = weighted_sum / total_weight if total_weight > 0 else np.mean(list(predictions.values()))
+            
+            # Apply extreme condition boost for very high-risk scenarios
+            temp = data.get('temperature', 25)
+            humidity = data.get('humidity', 50)
+            wind = data.get('wind_speed', 10)
+            
+            # Extreme fire weather conditions boost
+            if temp > 35 and humidity < 20 and wind > 15:
+                extreme_boost = min(0.2, (temp - 35) / 50 + (20 - humidity) / 100 + (wind - 15) / 100)
+                ensemble_score = min(0.95, ensemble_score + extreme_boost)
+                logger.info(f"Applied extreme conditions boost: +{extreme_boost:.3f}")
         else:
             logger.warning("No models available, using heuristic prediction")
             # Simple fire risk heuristic based on weather conditions
@@ -403,7 +431,9 @@ def predict_wildfire_risk():
             "timestamp": datetime.now().isoformat()
         }
         
-        logger.info(f"Prediction: {ensemble_score:.4f} ({risk_level}) using {len(predictions)} models")
+        logger.info(f"Individual predictions: {predictions}")
+        logger.info(f"Weighted ensemble: {ensemble_score:.4f} ({risk_level}) using {len(predictions)} models")
+        logger.info(f"Input conditions: T={data.get('temperature')}°C, H={data.get('humidity')}%, W={data.get('wind_speed')}mph")
         
         return jsonify(response)
         
