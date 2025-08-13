@@ -76,6 +76,7 @@ class SimpleDataCollector:
             CREATE TABLE IF NOT EXISTS training_data (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date TEXT NOT NULL,
+                location_id TEXT NOT NULL,
                 latitude REAL NOT NULL,
                 longitude REAL NOT NULL,
                 temperature REAL,
@@ -85,6 +86,8 @@ class SimpleDataCollector:
                 pressure REAL,
                 ndvi REAL,
                 evi REAL,
+                ndmi REAL,
+                nbr REAL,
                 fire_occurred INTEGER DEFAULT 0,
                 fire_risk_score REAL DEFAULT 0.0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
