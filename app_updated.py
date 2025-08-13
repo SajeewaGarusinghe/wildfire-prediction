@@ -241,11 +241,15 @@ def prepare_input_features(input_data: dict) -> np.ndarray:
         
         if missing_features:
             logger.warning(f"Missing features for prediction: {missing_features}")
+            # Add missing features with default values
+            for feature in missing_features:
+                df[feature] = 0.0
+            logger.info(f"Added {len(missing_features)} missing features with default values")
         
-        logger.info(f"Using {len(available_features)} features for prediction")
-        logger.info(f"Feature sample values: {df[available_features[:5]].iloc[0].to_dict()}")
-        
-        X = df[available_features].values
+        # Now use all required features
+        X = df[feature_columns].values
+        logger.info(f"Using {len(feature_columns)} features for prediction (shape: {X.shape})")
+        logger.info(f"Feature sample values: {df[feature_columns[:5]].iloc[0].to_dict()}")
         
         # Scale features if scaler is available
         if scaler is not None:
