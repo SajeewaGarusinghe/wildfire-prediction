@@ -71,10 +71,18 @@ class RealDatasetCollector:
                 }
                 
                 month = month_map.get(row['month'].lower(), 1)
-                day = min(row['day'] if pd.notna(row['day']) else 15, 28)  # Ensure valid day
+                # Handle day field properly - it might be a day name or number
+                try:
+                    if isinstance(row['day'], str):
+                        # If it's a day name, use 15th of month
+                        day = 15
+                    else:
+                        day = min(int(row['day']) if pd.notna(row['day']) else 15, 28)
+                except:
+                    day = 15
                 
                 try:
-                    date = datetime(year, month, int(day))
+                    date = datetime(year, month, day)
                 except:
                     date = datetime(year, month, 15)  # Fallback to mid-month
                 
@@ -374,7 +382,8 @@ class DatabaseManager:
                 confidence REAL,
                 containment_time REAL,
                 fire_occurred INTEGER DEFAULT 0,
-                area_burned REAL DEFAULT 0
+                area_burned REAL DEFAULT 0,
+                location_id TEXT
             )
         ''')
         
@@ -460,8 +469,16 @@ def main():
         uci_data = collector.download_uci_forest_fires()
         
         # Separate weather and fire data from UCI dataset
-        weather_columns = ['date', 'location_id', 'latitude', 'longitude', 'temperature', 
-                          'humidity', 'wind_speed', 'precipitation', 'ffmc', 'dmc', 'dc', 'isi']
+        # Check which columns actually exist in the dataset
+        available_columns = uci_data.columns.tolist()
+        logger.info(f"Available columns: {available_columns}")
+        
+        # Use only columns that exist
+        basic_weather_columns = ['date', 'location_id', 'latitude', 'longitude', 'temperature', 
+                               'humidity', 'wind_speed', 'precipitation']
+        optional_weather_columns = ['ffmc', 'dmc', 'dc', 'isi']
+        
+        weather_columns = basic_weather_columns + [col for col in optional_weather_columns if col in available_columns]
         fire_columns = ['date', 'latitude', 'longitude', 'area_burned', 'fire_occurred']
         
         uci_weather = uci_data[weather_columns].copy()
