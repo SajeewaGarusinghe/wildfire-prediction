@@ -167,8 +167,9 @@ def prepare_input_features(input_data: dict) -> np.ndarray:
         # Convert input to DataFrame
         df = pd.DataFrame([input_data])
         
-        # Add derived features similar to training
-        df['date'] = pd.to_datetime('2024-01-01')  # Use current date or default
+        # Add derived features similar to training - use current date for seasonal features
+        current_date = datetime.now()
+        df['date'] = pd.to_datetime(current_date)
         df['day_of_year'] = df['date'].dt.dayofyear
         df['month'] = df['date'].dt.month
         df['season'] = df['month'].map({
@@ -178,6 +179,8 @@ def prepare_input_features(input_data: dict) -> np.ndarray:
             9: 3, 10: 3, 11: 3  # Fall
         })
         df['fire_season'] = df['month'].apply(lambda x: 1 if x in [6, 7, 8, 9, 10] else 0)
+        
+        logger.info(f"Current date for prediction: {current_date.strftime('%Y-%m-%d')}, Month: {df['month'].iloc[0]}, Fire season: {df['fire_season'].iloc[0]}")
         
         # Cyclic encoding
         df['day_sin'] = np.sin(2 * np.pi * df['day_of_year'] / 365)
@@ -234,11 +237,20 @@ def prepare_input_features(input_data: dict) -> np.ndarray:
         
         # Select features that exist in the model
         available_features = [col for col in feature_columns if col in df.columns]
+        missing_features = [col for col in feature_columns if col not in df.columns]
+        
+        if missing_features:
+            logger.warning(f"Missing features for prediction: {missing_features}")
+        
+        logger.info(f"Using {len(available_features)} features for prediction")
+        logger.info(f"Feature sample values: {df[available_features[:5]].iloc[0].to_dict()}")
+        
         X = df[available_features].values
         
         # Scale features if scaler is available
         if scaler is not None:
             X = scaler.transform(X)
+            logger.info(f"Features scaled using saved scaler")
         
         return X
         
