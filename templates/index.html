@@ -294,15 +294,16 @@
                 
                 const result = await response.json();
                 
-                if (result.status === 'success') {
+                if (response.ok && result.risk_score !== undefined) {
                     displayResult(result);
                     updateMapMarker(formData.latitude, formData.longitude, result.risk_level);
                 } else {
-                    alert('Error: ' + result.error);
+                    alert('Error: ' + (result.error || 'Prediction failed'));
                 }
                 
             } catch (error) {
-                alert('Request failed: ' + error.message);
+                console.error('Prediction error:', error);
+                alert('Request failed: ' + (error.message || 'Unknown error'));
             } finally {
                 // Hide loading
                 document.querySelector('.loading').style.display = 'none';
@@ -311,6 +312,8 @@
         });
         
         function displayResult(result) {
+            console.log('Displaying result:', result);
+            
             // Show result card
             document.getElementById('resultCard').style.display = 'block';
             
@@ -320,7 +323,7 @@
             const riskCardElement = document.getElementById('riskCard');
             
             riskLevelElement.textContent = result.risk_level;
-            riskScoreElement.textContent = result.risk_score;
+            riskScoreElement.textContent = (result.risk_score * 100).toFixed(2) + '%';
             
             // Update colors
             riskCardElement.style.borderLeftColor = result.risk_color;
@@ -330,9 +333,9 @@
             const modelPredictions = document.getElementById('modelPredictions');
             modelPredictions.innerHTML = '';
             
-            for (const [model, prediction] of Object.entries(result.individual_predictions)) {
+            for (const [model, prediction] of Object.entries(result.predictions || {})) {
                 const li = document.createElement('li');
-                li.innerHTML = `<strong>${model}:</strong> ${prediction}`;
+                li.innerHTML = `<strong>${model.replace('_', ' ').toUpperCase()}:</strong> ${(prediction * 100).toFixed(2)}%`;
                 modelPredictions.appendChild(li);
             }
             

@@ -299,60 +299,6 @@ def get_risk_color(risk_level: str) -> str:
     }
     return colors.get(risk_level, "#6c757d")
 
-def validate_predictions(raw_predictions: dict, input_data: dict) -> dict:
-    """Validate model predictions and filter out obviously broken ones"""
-    validated = {}
-    
-    # Calculate expected risk range based on conditions
-    temp = input_data.get('temperature', 25)
-    humidity = input_data.get('humidity', 50)
-    wind = input_data.get('wind_speed', 10)
-    precip = input_data.get('precipitation', 0)
-    
-    # Simple physics-based risk estimate for sanity checking
-    temp_risk = max(0, min(1, (temp - 10) / 40))  # 0% at 10°C, 100% at 50°C
-    humidity_risk = max(0, min(1, (80 - humidity) / 80))  # 0% at 80%, 100% at 0%
-    wind_risk = max(0, min(1, wind / 40))  # 0% at 0mph, 100% at 40mph
-    precip_risk = max(0, min(1, (5 - precip) / 5))  # 0% at 5mm+, 100% at 0mm
-    
-    physics_risk = (temp_risk + humidity_risk + wind_risk + precip_risk) / 4
-    
-    # Define reasonable bounds
-    min_expected = max(0.001, physics_risk * 0.1)  # At least 10% of physics estimate
-    max_expected = min(0.95, physics_risk * 3 + 0.1)  # At most 3x physics + baseline
-    
-    logger.info(f"Physics-based risk estimate: {physics_risk:.3f}, bounds: [{min_expected:.3f}, {max_expected:.3f}]")
-    
-    for model_name, prediction in raw_predictions.items():
-        
-        # Check for obviously broken predictions
-        if model_name == 'logistic_regression':
-            # Logistic regression seems to always predict very high values
-            if prediction > 0.9 and physics_risk < 0.5:
-                logger.warning(f"Logistic regression prediction {prediction:.3f} seems too high for conditions, capping at {max_expected:.3f}")
-                validated[model_name] = min(prediction, max_expected)
-            else:
-                validated[model_name] = prediction
-        
-        elif model_name in ['gradient_boosting', 'random_forest']:
-            # Tree models seem to predict too low for extreme conditions
-            if prediction < 0.05 and physics_risk > 0.7:
-                logger.warning(f"{model_name} prediction {prediction:.3f} seems too low for extreme conditions, boosting")
-                validated[model_name] = max(prediction, min_expected)
-            else:
-                validated[model_name] = prediction
-        
-        else:
-            # Neural network and others - apply general bounds
-            if prediction < min_expected or prediction > max_expected:
-                clamped = max(min_expected, min(prediction, max_expected))
-                logger.warning(f"{model_name} prediction {prediction:.3f} outside expected range, clamped to {clamped:.3f}")
-                validated[model_name] = clamped
-            else:
-                validated[model_name] = prediction
-    
-    return validated
-
 @app.route('/')
 def dashboard():
     """Main dashboard"""
@@ -410,7 +356,6 @@ def predict_wildfire_risk():
         X = prepare_input_features(data)
         
         # Make predictions with all available models
-        raw_predictions = {}
         predictions = {}
         
         for model_name, model in models.items():
@@ -418,69 +363,21 @@ def predict_wildfire_risk():
                 if model_name == 'neural_network' and TF_AVAILABLE:
                     # TensorFlow model
                     pred_proba = model.predict(X, verbose=0)[0][0]
-                    raw_predictions[model_name] = float(pred_proba)
+                    predictions[model_name] = float(pred_proba)
                 else:
                     # Scikit-learn model
                     if hasattr(model, 'predict_proba'):
                         pred_proba = model.predict_proba(X)[0][1]  # Probability of fire
-                        raw_predictions[model_name] = float(pred_proba)
+                        predictions[model_name] = float(pred_proba)
                     else:
                         pred = model.predict(X)[0]
-                        raw_predictions[model_name] = float(pred)
+                        predictions[model_name] = float(pred)
             except Exception as e:
                 logger.warning(f"Prediction failed for {model_name}: {e}")
         
-        # Validate and filter predictions
-        predictions = validate_predictions(raw_predictions, data)
-        logger.info(f"Raw predictions: {raw_predictions}")
-        logger.info(f"Validated predictions: {predictions}")
-        
-        # Calculate weighted ensemble prediction based on model performance
+        # Calculate ensemble prediction
         if predictions:
-            # Adjust weights based on which models are working properly
-            # Neural network seems most reliable for extreme conditions
-            
-            temp = data.get('temperature', 25)
-            humidity = data.get('humidity', 50)
-            
-            if temp > 35 or humidity < 25:  # Extreme conditions
-                # Give more weight to neural network during extreme conditions
-                model_weights = {
-                    'neural_network': 0.4,       # Most reliable for extremes
-                    'gradient_boosting': 0.25,   # Good but conservative
-                    'random_forest': 0.25,       # Good but conservative  
-                    'logistic_regression': 0.1   # Tends to overpredict
-                }
-            else:  # Normal conditions
-                # Standard weights for normal conditions
-                model_weights = {
-                    'gradient_boosting': 0.35,   # Best overall (99.46% AUC)
-                    'random_forest': 0.30,       # Second best (98.82% AUC)  
-                    'neural_network': 0.25,      # Good performance (94.64% AUC)
-                    'logistic_regression': 0.10  # Baseline (85.74% AUC)
-                }
-            
-            # Calculate weighted average
-            weighted_sum = 0
-            total_weight = 0
-            
-            for model_name, prediction in predictions.items():
-                weight = model_weights.get(model_name, 0.2)  # Default weight
-                weighted_sum += prediction * weight
-                total_weight += weight
-            
-            ensemble_score = weighted_sum / total_weight if total_weight > 0 else np.mean(list(predictions.values()))
-            
-            # Apply extreme condition boost for very high-risk scenarios
-            temp = data.get('temperature', 25)
-            humidity = data.get('humidity', 50)
-            wind = data.get('wind_speed', 10)
-            
-            # Extreme fire weather conditions boost
-            if temp > 35 and humidity < 20 and wind > 15:
-                extreme_boost = min(0.2, (temp - 35) / 50 + (20 - humidity) / 100 + (wind - 15) / 100)
-                ensemble_score = min(0.95, ensemble_score + extreme_boost)
-                logger.info(f"Applied extreme conditions boost: +{extreme_boost:.3f}")
+            ensemble_score = np.mean(list(predictions.values()))
         else:
             logger.warning("No models available, using heuristic prediction")
             # Simple fire risk heuristic based on weather conditions
@@ -506,10 +403,7 @@ def predict_wildfire_risk():
             "timestamp": datetime.now().isoformat()
         }
         
-        logger.info(f"Raw predictions: {raw_predictions}")
-        logger.info(f"Validated predictions: {predictions}")
-        logger.info(f"Weighted ensemble: {ensemble_score:.4f} ({risk_level}) using {len(predictions)} models")
-        logger.info(f"Input conditions: T={data.get('temperature')}°C, H={data.get('humidity')}%, W={data.get('wind_speed')}mph, P={data.get('precipitation')}mm")
+        logger.info(f"Prediction: {ensemble_score:.4f} ({risk_level}) using {len(predictions)} models")
         
         return jsonify(response)
         

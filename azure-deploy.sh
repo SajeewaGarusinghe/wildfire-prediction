@@ -110,3 +110,6 @@ echo "   - Firewall is configured for ports 22, 80, 443, 5050"
 echo "   - Consider setting up SSL certificates for HTTPS"
 echo "   - Change default passwords and API keys"
 echo ""
+
+
+

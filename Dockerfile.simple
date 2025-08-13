@@ -21,6 +21,8 @@ COPY app.py .
 COPY config.py .
 COPY src/ ./src/
 COPY templates/ ./templates/
+COPY run_simple_pipeline.py .
+COPY run_improved_pipeline.py .
 
 # Create necessary directories
 RUN mkdir -p data models logs static
@@ -38,5 +40,24 @@ EXPOSE 5050
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:5050/api/health || exit 1
 
-# Run the application
-CMD ["python", "app.py"]
+# Create startup script
+RUN echo '#!/bin/bash\n\
+echo "🚀 Starting Wildfire Prediction System..."\n\
+echo "📊 Checking for existing models..."\n\
+if [ ! -f "/app/models/random_forest.pkl" ]; then\n\
+    echo "🔧 No models found, creating training data and training improved models..."\n\
+    python3 run_improved_pipeline.py\n\
+    echo "✅ Improved training completed!"\n\
+else\n\
+    echo "✅ Models already exist, skipping training"\n\
+fi\n\
+echo "🌐 Starting web application..."\n\
+python3 app.py' > /app/startup.sh
+
+RUN chmod +x /app/startup.sh
+
+# Run the startup script
+CMD ["/bin/bash", "/app/startup.sh"]
+
+
+

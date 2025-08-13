@@ -107,9 +107,9 @@ class APIConfig:
     PORT = 5050
     DEBUG = False  # Set to False for production deployment
     
-    # Risk thresholds
-    HIGH_RISK_THRESHOLD = 0.8
-    MODERATE_RISK_THRESHOLD = 0.6
+    # Risk thresholds (more realistic for wildfire prediction)
+    HIGH_RISK_THRESHOLD = 0.4  # 40%+ is high risk
+    MODERATE_RISK_THRESHOLD = 0.15  # 15%+ is moderate risk
     
     # Rate limiting
     REQUESTS_PER_MINUTE = 60
