@@ -35,9 +35,17 @@ def clear_models():
     """Clear existing models to force retraining"""
     models_dir = Path('models')
     if models_dir.exists():
-        import shutil
-        shutil.rmtree(models_dir)
-        logger.info("Cleared existing models directory")
+        # Clear individual files instead of removing directory
+        import glob
+        model_files = glob.glob(str(models_dir / '*'))
+        for file_path in model_files:
+            try:
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                    logger.info(f"Removed {file_path}")
+            except Exception as e:
+                logger.warning(f"Could not remove {file_path}: {e}")
+        logger.info("Cleared existing model files")
     models_dir.mkdir(parents=True, exist_ok=True)
 
 def run_data_collection():
