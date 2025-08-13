@@ -202,12 +202,12 @@ class ImprovedModelTrainer:
         model.compile(
             optimizer=optimizer,
             loss='binary_crossentropy',
-            metrics=['accuracy', 'AUC', 'precision', 'recall']
+            metrics=['accuracy']
         )
         
         # Improved callbacks
         callbacks = [
-            EarlyStopping(monitor='val_auc', patience=15, restore_best_weights=True, mode='max'),
+            EarlyStopping(monitor='val_accuracy', patience=15, restore_best_weights=True, mode='max'),
             ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=8, min_lr=1e-6)
         ]
         
@@ -224,9 +224,8 @@ class ImprovedModelTrainer:
         )
         
         # Get final validation metrics
-        val_loss, val_accuracy, val_auc, val_precision, val_recall = model.evaluate(X_test, y_test, verbose=0)
-        logger.info(f"Neural Network - Val Accuracy: {val_accuracy:.4f}, Val AUC: {val_auc:.4f}")
-        logger.info(f"Neural Network - Val Precision: {val_precision:.4f}, Val Recall: {val_recall:.4f}")
+        val_loss, val_accuracy = model.evaluate(X_test, y_test, verbose=0)
+        logger.info(f"Neural Network - Val Loss: {val_loss:.4f}, Val Accuracy: {val_accuracy:.4f}")
         
         # Test prediction to ensure it's working
         test_pred = model.predict(X_test[:5], verbose=0)
