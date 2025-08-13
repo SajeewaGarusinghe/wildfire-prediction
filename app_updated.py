@@ -74,6 +74,13 @@ def load_models():
             logger.info("✅ Loaded Simple Logistic Regression model")
             simple_models_loaded = True
         
+        # Load Gradient Boosting model
+        gb_simple_path = models_dir / "gradient_boosting.pkl"
+        if gb_simple_path.exists():
+            models['gradient_boosting'] = joblib.load(gb_simple_path)
+            logger.info("✅ Loaded Gradient Boosting model")
+            simple_models_loaded = True
+        
         # Load Simple Neural Network model
         if TF_AVAILABLE:
             nn_simple_path = models_dir / "neural_network.h5"
