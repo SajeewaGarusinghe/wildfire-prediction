@@ -20,8 +20,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Import pipeline modules
-from src.data_collection import main as collect_data
+# Import pipeline modules - will be set based on command line args
+collect_data = None
 from src.feature_engineering import main as engineer_features
 from src.models import main as train_models
 
@@ -193,11 +193,34 @@ def main():
         help='Enable verbose logging'
     )
     
+    parser.add_argument(
+        '--use-kaggle',
+        action='store_true',
+        help='Force use of real Kaggle/UCI datasets instead of synthetic data'
+    )
+    
     args = parser.parse_args()
     
     # Set logging level
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+    
+    # Import data collection module based on arguments
+    global collect_data
+    if args.use_kaggle:
+        try:
+            from src.data_collection_kaggle import main as collect_data
+            logger.info("Using real dataset collection (Kaggle/UCI)")
+        except ImportError:
+            logger.error("Kaggle data collection module not available, falling back to synthetic")
+            from src.data_collection import main as collect_data
+    else:
+        try:
+            from src.data_collection_kaggle import main as collect_data
+            logger.info("Using real dataset collection (Kaggle/UCI) - default choice")
+        except ImportError:
+            from src.data_collection import main as collect_data
+            logger.info("Using synthetic dataset collection - Kaggle module not available")
     
     # Check prerequisites
     if not args.skip_checks:

@@ -42,3 +42,6 @@ echo "🌐 Access the application at:"
 echo "   - Main app: http://localhost:5050"
 echo "   - Via nginx: http://localhost:80" 
 echo "   - Health check: http://localhost:5050/api/health"
+
+
+

@@ -158,3 +158,6 @@ echo "🔍 For debugging, check the logs above or run:"
 echo "   docker compose logs wildfire-api"
 
 exit 1
+
+
+
