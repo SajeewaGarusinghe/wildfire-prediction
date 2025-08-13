@@ -302,7 +302,8 @@
                 }
                 
             } catch (error) {
-                alert('Request failed: ' + error.message);
+                console.error('Prediction error:', error);
+                alert('Request failed: ' + (error.message || 'Unknown error'));
             } finally {
                 // Hide loading
                 document.querySelector('.loading').style.display = 'none';
@@ -311,6 +312,8 @@
         });
         
         function displayResult(result) {
+            console.log('Displaying result:', result);
+            
             // Show result card
             document.getElementById('resultCard').style.display = 'block';
             
